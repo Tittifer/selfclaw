@@ -1,6 +1,6 @@
 {
-  "provider": "openai",
-  "model": "test-model",
+  "provider": "mock",
+  "model": "mock-model",
   "api_key": "",
   "base_url": ""
 }
