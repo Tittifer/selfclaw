@@ -1,0 +1,6 @@
+{
+  "provider": "openai",
+  "model": "test-model",
+  "api_key": "",
+  "base_url": ""
+}
