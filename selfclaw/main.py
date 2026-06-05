@@ -1,10 +1,11 @@
 import argparse
 
 from selfclaw import __version__
-from selfclaw.config import load_config, save_config
+from selfclaw.config import ALLOWED_CONFIG_KEYS, load_config, save_config
 from selfclaw.llm import create_llm_client
-from selfclaw.agent import Agent
 from selfclaw.memory import add_memory, search_memory
+from selfclaw.session_store import clear_session, list_sessions, load_session
+from selfclaw.session_manager import SessionManager
 
 
 def run_version():
@@ -13,8 +14,14 @@ def run_version():
 
 def run_chat(session_id):
     config = load_config()
-    llm = create_llm_client(config)
-    agent = Agent(llm, session_id=session_id)
+
+    try:
+        llm = create_llm_client(config)
+    except ValueError as error:
+        print(f"Error: {error}")
+        return
+
+    session_manager = SessionManager(llm)
 
     print(f"SelfClaw chat started. Session: {session_id}. Type 'exit' to quit.")
 
@@ -25,18 +32,37 @@ def run_chat(session_id):
             print("Bye.")
             break
 
-        reply = agent.chat(user_text)
+        try:
+            reply = session_manager.chat(session_id, user_text)
+        except RuntimeError as error:
+            print(f"Error: {error}")
+            continue
+
         print(f"SelfClaw: {reply}")
+
+
+def format_config_value(key, value):
+    if key == "api_key" and value:
+        return "********"
+
+    return value
 
 
 def run_config_show():
     config = load_config()
 
     for key, value in config.items():
-        print(f"{key}: {value}")
+        display_value = format_config_value(key, value)
+        print(f"{key}: {display_value}")
 
 
 def run_config_set(key, value):
+    if key not in ALLOWED_CONFIG_KEYS:
+        allowed = ", ".join(sorted(ALLOWED_CONFIG_KEYS))
+        print(f"Invalid config key: {key}")
+        print(f"Allowed keys: {allowed}")
+        return
+
     config = load_config()
     config[key] = value
     save_config(config)
@@ -58,6 +84,39 @@ def run_memory_search(query):
 
     for result in results:
         print(result)
+
+
+def run_session_list():
+    sessions = list_sessions()
+
+    if not sessions:
+        print("No sessions found.")
+        return
+
+    for session_id in sessions:
+        print(session_id)
+
+
+def run_session_show(session_id):
+    messages = load_session(session_id)
+
+    if not messages:
+        print(f"No messages found for session: {session_id}")
+        return
+
+    for message in messages:
+        role = message["role"]
+        content = message["content"]
+        print(f"{role}: {content}")
+
+
+def run_session_clear(session_id):
+    cleared = clear_session(session_id)
+
+    if cleared:
+        print(f"Session cleared: {session_id}")
+    else:
+        print(f"Session not found: {session_id}")
 
 
 def main():
@@ -86,6 +145,19 @@ def main():
     memory_search_parser = memory_subparsers.add_parser("search")
     memory_search_parser.add_argument("query")
 
+
+    session_parser = subparsers.add_parser("session")
+    session_subparsers = session_parser.add_subparsers(dest="session_command")
+
+    session_subparsers.add_parser("list")
+
+    session_show_parser = session_subparsers.add_parser("show")
+    session_show_parser.add_argument("session_id")
+
+    session_clear_parser = session_subparsers.add_parser("clear")
+    session_clear_parser.add_argument("session_id")
+
+
     args = parser.parse_args()
 
     if args.command == "version":
@@ -104,6 +176,15 @@ def main():
             run_memory_add(args.text)
         elif args.memory_command == "search":
             run_memory_search(args.query)
+        else:
+            parser.print_help()
+    elif args.command == "session":
+        if args.session_command == "list":
+            run_session_list()
+        elif args.session_command == "show":
+            run_session_show(args.session_id)
+        elif args.session_command == "clear":
+            run_session_clear(args.session_id)
         else:
             parser.print_help()
     else:

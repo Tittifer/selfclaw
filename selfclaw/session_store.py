@@ -24,4 +24,26 @@ def save_session(session_id, messages):
     path = get_session_path(session_id)
 
     with path.open("w", encoding="utf-8") as file:
-        json.dump(messages, file, indent=2)
+        json.dump(messages, file, indent=2, ensure_ascii=False)
+
+
+def list_sessions():
+    if not SESSION_DIR.exists():
+        return []
+
+    sessions = []
+
+    for path in SESSION_DIR.glob("*.json"):
+        sessions.append(path.stem)
+
+    return sorted(sessions)
+
+
+def clear_session(session_id):
+    path = get_session_path(session_id)
+
+    if path.exists():
+        path.unlink()
+        return True
+
+    return False
