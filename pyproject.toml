@@ -13,3 +13,7 @@ selfclaw = "selfclaw.main:main"
 
 [tool.setuptools.packages.find]
 include = ["selfclaw*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

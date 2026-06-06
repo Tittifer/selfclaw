@@ -6,6 +6,9 @@ MEMORY_PATH = MEMORY_DIR / "notes.md"
 
 
 def add_memory(text):
+    if memory_exists(text):
+        return False
+
     MEMORY_DIR.mkdir(parents=True, exist_ok=True)
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -13,6 +16,8 @@ def add_memory(text):
 
     with MEMORY_PATH.open("a", encoding="utf-8") as file:
         file.write(line)
+
+    return True
 
 
 def load_memories():
@@ -23,7 +28,7 @@ def load_memories():
         return file.readlines()
 
 
-def search_memory(query):
+def search_memory(query, limit=5):
     memories = load_memories()
     results = []
 
@@ -31,4 +36,21 @@ def search_memory(query):
         if query in memory:
             results.append(memory.strip())
 
-    return results
+    return results[:limit]
+
+
+def memory_exists(text):
+    memories = load_memories()
+
+    for memory in memories:
+        if memory.endswith(f"{text}\n") or memory.endswith(text):
+            return True
+
+    return False
+
+
+def clear_memories():
+    MEMORY_DIR.mkdir(parents=True, exist_ok=True)
+
+    with MEMORY_PATH.open("w", encoding="utf-8") as file:
+        file.write("")

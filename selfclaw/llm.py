@@ -13,10 +13,15 @@ class LLMClient(ABC):
 class MockLLMClient(LLMClient):
     def generate(self, messages):
         last_message = messages[-1]["content"]
+        system_messages = [
+            message["content"]
+            for message in messages
+            if message["role"] == "system"
+        ]
 
-        if messages and messages[0]["role"] == "system":
-            memory = messages[0]["content"]
-            return f"I found this memory:\n{memory}\n\nYou said: {last_message}"
+        if system_messages:
+            system_text = "\n\n".join(system_messages)
+            return f"System context:\n{system_text}\n\nYou said: {last_message}"
 
         return f"You said: {last_message}"
     
